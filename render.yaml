@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: maxi-ai-lab-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://maxicantarella1.github.io
