@@ -52,7 +52,28 @@
     disponible de Gemini ni ejecuta agentes.
   </p>
 </section>
-<section class="metrics" aria-label="Métricas"><div class="metric"><small>ESTADO</small><strong id="status">Completado</strong><span id="run-id">Ejemplo local</span></div><div class="metric"><small>LATENCIA TOTAL</small><strong id="elapsed">—</strong><span>Tiempo informado por la API</span></div><div class="metric"><small>TOKENS ENTRADA</small><strong id="input">—</strong><span>Acumulado de etapas</span></div><div class="metric"><small>TOKENS SALIDA</small><strong id="output">—</strong><span>Acumulado de etapas</span></div></section><section class="section"><h2>Flujo de ejecución</h2><div class="stages" id="stages"></div></section><section class="section panel"><div class="panel-title"><h2 id="detail-title">Respuesta del agente</h2><button id="copy-stage">Copiar etapa</button></div><div class="output" id="detail" aria-live="polite"></div></section><section class="section panel"><div class="panel-title"><h2>Respuesta final</h2></div><div class="output" id="answer"></div></section><div class="footer">Maxi AI Lab · Los datos importados no se guardan ni se transmiten. Las trazas reales deben consultarse en el backend y Grafana. Este panel no realiza ejecuciones en vivo.</div></main></div><script>
+<section class="metrics" aria-label="Métricas"><div class="metric"><small>ESTADO</small><strong id="status">Completado</strong><span id="run-id">Ejemplo local</span></div><div class="metric"><small>LATENCIA TOTAL</small><strong id="elapsed">—</strong><span>Tiempo informado por la API</span></div><div class="metric"><small>TOKENS ENTRADA</small><strong id="input">—</strong><span>Acumulado de etapas</span></div><div class="metric"><small>TOKENS SALIDA</small><strong id="output">—</strong><span>Acumulado de etapas</span></div></section><section class="section"><h2>Flujo de ejecución</h2><div class="stages" id="stages"></div></section><section class="section panel"><div class="panel-title"><h2 id="detail-title">Respuesta del agente</h2><button id="copy-stage">Copiar etapa</button></div><div class="output" id="detail" aria-live="polite"></div></section><section class="section panel"><div class="panel-title"><h2>Respuesta final</h2></div><div class="output" id="answer"></div></section>
+<section id="observability" class="section panel hidden">
+  <h2>Observability Center</h2>
+  <p class="help">
+    Monitoreo de latencia, tokens, ejecuciones
+    y errores de los agentes de Maxi AI Lab.
+  </p>
+  <div class="actions">
+    <a href="https://boldriver272.grafana.net/goto/smhk9s"
+       target="_blank"
+       rel="noopener noreferrer">
+      <button type="button">
+        Abrir Grafana Cloud ↗
+      </button>
+    </a>
+  </div>
+  <p class="help">
+    Los gráficos están alojados en Grafana Cloud.
+    Puede ser necesario iniciar sesión para verlos.
+  </p>
+</section>
+<div class="footer">Maxi AI Lab · Los datos importados no se guardan ni se transmiten. Las trazas reales deben consultarse en el backend y Grafana. Este panel no realiza ejecuciones en vivo.</div></main></div><script>
 'use strict';
 const $=id=>document.getElementById(id);
 const fmt=n=>Number.isFinite(n)?new Intl.NumberFormat('es-AR').format(n):'—';
