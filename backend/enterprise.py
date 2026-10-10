@@ -112,7 +112,7 @@ async def stage(role: str, instruction: str, prompt: str) -> Stage:
     started = time.perf_counter()
 
     async def execute(span=None):
-        for attempt in range(1, 3)::
+        for attempt in range(1, 3):
             try:
                 result = await asyncio.wait_for(
                     asyncio.to_thread(invoke_llm, instruction, prompt),
