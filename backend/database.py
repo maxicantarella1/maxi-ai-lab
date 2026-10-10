@@ -107,9 +107,32 @@ class ExecutionStage(Base):
     )
 
 
+
 def init_db():
-    """Create missing tables when the database is configured."""
+    """Create tables and migrate the public visibility column."""
     if engine is None:
         return
 
+    from sqlalchemy import inspect, text
+
     Base.metadata.create_all(bind=engine)
+
+    inspector = inspect(engine)
+
+    if "executions" not in inspector.get_table_names():
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("executions")
+    }
+
+    if "is_public" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE executions "
+                    "ADD COLUMN IF NOT EXISTS is_public "
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                )
+            )
