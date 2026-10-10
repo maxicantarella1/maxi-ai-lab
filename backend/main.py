@@ -31,7 +31,8 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
-
+app.include_router(enterprise_router)
+setup_observability(app)
 class ResearchRequest(BaseModel):
     message: str = Field(min_length=5, max_length=1200)
 
