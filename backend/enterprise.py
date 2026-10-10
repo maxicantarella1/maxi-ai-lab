@@ -17,6 +17,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 from google.genai import errors as genai_errors
+from backend.database import SessionLocal, Execution, ExecutionStage
 log = logging.getLogger('maxi_ai_lab.enterprise')
 router = APIRouter(prefix='/api/enterprise', tags=['multi-agent demo'])
 MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
@@ -226,8 +227,65 @@ async def run_agents(payload: AgentRequest, request: Request, x_demo_token: str 
     in_values = [s.input_tokens for s in stages]
     out_values = [s.output_tokens for s in stages]
     log.info('Multi-agent run complete run_id=%s elapsed_ms=%s', run_id, elapsed)
-    return AgentResult(run_id=run_id, status='completed', model=MODEL, elapsed_ms=elapsed,
+    
+    result = AgentResult(
+        run_id=run_id,
+        status='completed',
+        model=MODEL,
+        elapsed_ms=elapsed,
         stages=stages,
-        total_input_tokens=sum(in_values) if all(v is not None for v in in_values) else None,
-        total_output_tokens=sum(out_values) if all(v is not None for v in out_values) else None,
-        estimated_cost_usd=None, answer=writer.text)
+        total_input_tokens=(
+            sum(in_values)
+            if all(v is not None for v in in_values)
+            else None
+        ),
+        total_output_tokens=(
+            sum(out_values)
+            if all(v is not None for v in out_values)
+            else None
+        ),
+        estimated_cost_usd=None,
+        answer=writer.text,
+    )
+
+    def save_execution():
+        if SessionLocal is None:
+            log.warning("Database not configured; execution not saved")
+            return
+
+        with SessionLocal() as db:
+            execution = Execution(
+                id=run_id,
+                prompt=payload.prompt,
+                status=result.status,
+                model=result.model,
+                elapsed_ms=result.elapsed_ms,
+                input_tokens=result.total_input_tokens,
+                output_tokens=result.total_output_tokens,
+                answer=result.answer,
+            )
+
+            for item in result.stages:
+                execution.stages.append(
+                    ExecutionStage(
+                        role=item.role,
+                        elapsed_ms=item.elapsed_ms,
+                        input_tokens=item.input_tokens,
+                        output_tokens=item.output_tokens,
+                        text=item.text,
+                    )
+                )
+
+            db.add(execution)
+            db.commit()
+
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(save_execution),
+            timeout=10,
+        )
+        log.info("Execution persistence attempted run_id=%s", run_id)
+    except Exception:
+        log.exception("Failed to persist execution run_id=%s", run_id)
+
+    return result
