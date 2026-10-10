@@ -1,0 +1,5 @@
+# Add these to the existing requirements.txt (keep existing packages).
+opentelemetry-api>=1.25,<2
+opentelemetry-sdk>=1.25,<2
+opentelemetry-exporter-otlp-proto-http>=1.25,<2
+opentelemetry-instrumentation-fastapi>=0.46b0,<1
