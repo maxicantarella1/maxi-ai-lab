@@ -10,6 +10,7 @@ from google import genai
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
 from backend.enterprise import router as enterprise_router
+from backend.database import init_db
 from backend.observability import setup_observability
 
 logger = logging.getLogger("maxi_ai_lab")
@@ -24,7 +25,19 @@ ALLOWED_ORIGINS = [x.strip() for x in os.getenv("ALLOWED_ORIGINS", "").split(","
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 signer = URLSafeTimedSerializer(SIGNING_SECRET, salt="maxi-ai-lab-tasks") if SIGNING_SECRET else None
 
-app = FastAPI(title="Maxi AI Lab Research API", version="2.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await asyncio.to_thread(init_db)
+    yield
+
+
+app = FastAPI(
+    title="Maxi AI Lab Research API",
+    version="2.0.0",
+    lifespan=lifespan,
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
