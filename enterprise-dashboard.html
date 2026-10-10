@@ -167,23 +167,11 @@ historySection.innerHTML = `
   <div class="panel">
     <h2>Execution History</h2>
     <p class="help">
-      Consultá ejecuciones guardadas en PostgreSQL.
-      El token se utiliza solamente en memoria.
+      Ejecuciones públicas de Maxi AI Lab.
+      Preguntas, respuestas y resultados de los agentes.
     </p>
-    <input
-      id="history-token"
-      type="password"
-      autocomplete="off"
-      placeholder="Ingresá tu token privado"
-      style="width:100%;padding:12px;background:#0a1526;
-             color:white;border:1px solid #3b506a;
-             border-radius:9px;margin-bottom:12px"
-    >
     <button id="load-history" class="primary">
-      Cargar historial
-    </button>
-    <button id="clear-history-token">
-      Borrar token
+      Actualizar historial
     </button>
     <p id="history-message" class="help"></p>
     <div id="history-results"></div>
@@ -193,149 +181,129 @@ historySection.innerHTML = `
 
 document.querySelector("main").append(historySection);
 
-const historyToken = document.getElementById("history-token");
 const historyResults = document.getElementById("history-results");
 const historyDetail = document.getElementById("history-detail");
 const historyMessage = document.getElementById("history-message");
 
-document.getElementById("clear-history-token")
-  .addEventListener("click", () => {
-    historyToken.value = "";
-    historyResults.replaceChildren();
-    historyDetail.replaceChildren();
-    historyDetail.classList.add("hidden");
-    historyMessage.textContent = "Token borrado.";
-  });
+const publicHistoryAPI =
+  "https://maxi-ai-lab-1.onrender.com/api/enterprise/public/history";
 
-document.getElementById("load-history")
-  .addEventListener("click", async () => {
-    const token = historyToken.value;
+async function loadPublicHistory() {
+  historyMessage.textContent = "Cargando historial...";
+  historyResults.replaceChildren();
+  historyDetail.replaceChildren();
+  historyDetail.classList.add("hidden");
 
-    if (!token) {
-      historyMessage.textContent = "Ingresá tu token.";
-      return;
+  try {
+    const response = await fetch(publicHistoryAPI, {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
     }
 
-    historyMessage.textContent = "Cargando historial...";
-    historyResults.replaceChildren();
-    historyDetail.replaceChildren();
-    historyDetail.classList.add("hidden");
+    const executions = await response.json();
 
-    try {
-      const response = await fetch(
-        "https://maxi-ai-lab-1.onrender.com/api/enterprise/history",
-        {
-          headers: {"x-demo-token": token},
-          cache: "no-store"
-        }
-      );
+    historyMessage.textContent =
+      executions.length + " ejecuciones públicas encontradas.";
 
-      if (!response.ok) {
-        throw new Error("HTTP " + response.status);
-      }
+    for (const item of executions) {
+      const card = document.createElement("div");
+      card.className = "panel";
+      card.style.marginTop = "12px";
 
-      const executions = await response.json();
+      const title = document.createElement("h3");
+      title.textContent = item.prompt || "Sin pregunta";
 
-      historyMessage.textContent =
-        executions.length + " ejecuciones encontradas.";
+      const info = document.createElement("p");
+      info.className = "help";
+      info.textContent =
+        item.status + " · " +
+        item.model + " · " +
+        ((item.elapsed_ms || 0) / 1000).toFixed(2) + " s";
 
-      for (const item of executions) {
-        const card = document.createElement("div");
-        card.className = "panel";
-        card.style.marginTop = "12px";
+      const button = document.createElement("button");
+      button.textContent = "Ver respuesta y agentes →";
 
-        const title = document.createElement("h3");
-        title.textContent = item.prompt || "Sin pregunta";
+      button.addEventListener("click", async () => {
+        historyDetail.classList.remove("hidden");
+        historyDetail.textContent = "Cargando detalle...";
 
-        const info = document.createElement("p");
-        info.className = "help";
-        info.textContent =
-          item.status + " · " +
-          item.model + " · " +
-          (item.elapsed_ms / 1000).toFixed(2) + " s";
+        try {
+          const detailResponse = await fetch(
+            publicHistoryAPI + "/" +
+            encodeURIComponent(item.run_id),
+            { cache: "no-store" }
+          );
 
-        const button = document.createElement("button");
-        button.textContent = "Ver agentes →";
+          if (!detailResponse.ok) {
+            throw new Error("HTTP " + detailResponse.status);
+          }
 
-        button.addEventListener("click", async () => {
-          historyDetail.classList.remove("hidden");
+          const detail = await detailResponse.json();
           historyDetail.replaceChildren();
 
-          const loading = document.createElement("p");
-          loading.textContent = "Cargando detalle...";
-          historyDetail.append(loading);
+          const heading = document.createElement("h2");
+          heading.textContent = "Pregunta: " + detail.prompt;
+          historyDetail.append(heading);
 
-          try {
-            const detailResponse = await fetch(
-              "https://maxi-ai-lab-1.onrender.com/api/enterprise/history/" +
-              encodeURIComponent(item.run_id),
-              {
-                headers: {"x-demo-token": historyToken.value},
-                cache: "no-store"
-              }
-            );
+          for (const stage of detail.stages || []) {
+            const panel = document.createElement("div");
+            panel.className = "panel";
+            panel.style.marginTop = "12px";
 
-            if (!detailResponse.ok) {
-              throw new Error("HTTP " + detailResponse.status);
-            }
+            const name = document.createElement("h3");
+            name.textContent = stage.role;
 
-            const detail = await detailResponse.json();
-            historyDetail.replaceChildren();
+            const output = document.createElement("div");
+            output.className = "output";
+            output.textContent = stage.text || "";
 
-            const heading = document.createElement("h2");
-            heading.textContent = "Detalle de ejecución";
-            historyDetail.append(heading);
-
-            for (const stage of detail.stages) {
-              const panel = document.createElement("div");
-              panel.className = "panel";
-              panel.style.marginTop = "12px";
-
-              const name = document.createElement("h3");
-              name.textContent = stage.role;
-
-              const output = document.createElement("div");
-              output.className = "output";
-              output.textContent = stage.text || "";
-
-              panel.append(name, output);
-              historyDetail.append(panel);
-            }
-
-            const finalPanel = document.createElement("div");
-            finalPanel.className = "panel";
-            finalPanel.style.marginTop = "12px";
-
-            const finalTitle = document.createElement("h3");
-            finalTitle.textContent = "Respuesta final";
-
-            const finalText = document.createElement("div");
-            finalText.className = "output";
-            finalText.textContent = detail.answer || "";
-
-            finalPanel.append(finalTitle, finalText);
-            historyDetail.append(finalPanel);
-
-            historyDetail.scrollIntoView({
-              behavior: "smooth",
-              block: "start"
-            });
-
-          } catch (error) {
-            historyDetail.textContent =
-              "No se pudo cargar el detalle: " + error.message;
+            panel.append(name, output);
+            historyDetail.append(panel);
           }
-        });
 
-        card.append(title, info, button);
-        historyResults.append(card);
-      }
+          const finalPanel = document.createElement("div");
+          finalPanel.className = "panel";
+          finalPanel.style.marginTop = "12px";
 
-    } catch (error) {
-      historyMessage.textContent =
-        "Error al consultar el historial: " + error.message;
+          const finalTitle = document.createElement("h3");
+          finalTitle.textContent = "Respuesta final";
+
+          const finalText = document.createElement("div");
+          finalText.className = "output";
+          finalText.textContent = detail.answer || "";
+
+          finalPanel.append(finalTitle, finalText);
+          historyDetail.append(finalPanel);
+
+          historyDetail.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+
+        } catch (error) {
+          historyDetail.textContent =
+            "No se pudo cargar el detalle: " + error.message;
+        }
+      });
+
+      card.append(title, info, button);
+      historyResults.append(card);
     }
-  });
+
+  } catch (error) {
+    historyMessage.textContent =
+      "Error al consultar el historial: " + error.message;
+  }
+}
+
+document.getElementById("load-history")
+  .addEventListener("click", loadPublicHistory);
+
+// Carga automática al abrir el dashboard.
+loadPublicHistory();
 
 
 </script>
