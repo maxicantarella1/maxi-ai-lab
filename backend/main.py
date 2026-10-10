@@ -90,6 +90,7 @@ async def chat(request: ChatRequest):
 
 
     except httpx.HTTPStatusError as exc:
+        print("Gemini response:", exc.response.text[:1000], flush=True)
         print(
             f"Gemini HTTP error: {exc.response.status_code} "
             f"{exc.response.reason_phrase}",
