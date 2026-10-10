@@ -290,12 +290,15 @@ async def run_agents(payload: AgentRequest, request: Request, x_demo_token: str 
 
     return result
 
-@router.get("/history")
-async def execution_history(
+
+@router.get("/history/{run_id}")
+async def execution_detail(
+    run_id: uuid.UUID,
     x_demo_token: str | None = Header(default=None),
 ):
     import secrets
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
 
     if not DEMO_TOKEN:
         raise HTTPException(503, "Enterprise demo not configured")
@@ -308,37 +311,53 @@ async def execution_history(
     if SessionLocal is None:
         raise HTTPException(503, "Database not configured")
 
-    def load_history():
+    def load_detail():
         with SessionLocal() as db:
             statement = (
                 select(Execution)
-                .order_by(Execution.created_at.desc())
-                .limit(50)
+                .options(selectinload(Execution.stages))
+                .where(Execution.id == str(run_id))
             )
+            item = db.scalar(statement)
 
-            executions = db.scalars(statement).all()
+            if item is None:
+                return None
 
-            return [
-                {
-                    "run_id": item.id,
-                    "created_at": item.created_at.isoformat(),
-                    "prompt": item.prompt,
-                    "status": item.status,
-                    "model": item.model,
-                    "elapsed_ms": item.elapsed_ms,
-                    "input_tokens": item.input_tokens,
-                    "output_tokens": item.output_tokens,
-                }
-                for item in executions
-            ]
+            return {
+                "run_id": item.id,
+                "created_at": item.created_at.isoformat(),
+                "prompt": item.prompt,
+                "status": item.status,
+                "model": item.model,
+                "elapsed_ms": item.elapsed_ms,
+                "input_tokens": item.input_tokens,
+                "output_tokens": item.output_tokens,
+                "answer": item.answer,
+                "stages": [
+                    {
+                        "role": stage.role,
+                        "elapsed_ms": stage.elapsed_ms,
+                        "input_tokens": stage.input_tokens,
+                        "output_tokens": stage.output_tokens,
+                        "text": stage.text,
+                    }
+                    for stage in item.stages
+                ],
+            }
 
     try:
-        return await asyncio.wait_for(
-            asyncio.to_thread(load_history),
+        result = await asyncio.wait_for(
+            asyncio.to_thread(load_detail),
             timeout=10,
         )
     except Exception:
-        log.exception("Failed to load execution history")
+        log.exception("Failed to load execution detail")
         raise HTTPException(
-            503, "Could not load execution history"
+            503, "Could not load execution detail"
         )
+
+    if result is None:
+        raise HTTPException(404, "Execution not found")
+
+    return result
+
