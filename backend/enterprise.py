@@ -15,7 +15,7 @@ from typing import Literal
 from fastapi import APIRouter, Header, HTTPException, Request
 from google import genai
 from pydantic import BaseModel, Field
-
+from google.genai import errors as genai_errors
 log = logging.getLogger('maxi_ai_lab.enterprise')
 router = APIRouter(prefix='/api/enterprise', tags=['multi-agent demo'])
 MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
