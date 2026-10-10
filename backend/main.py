@@ -1,44 +1,96 @@
+import asyncio
+import logging
 import os
+from contextlib import asynccontextmanager
+from functools import partial
 
-import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from google import genai
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Maxi AI Lab API", version="1.0.0")
-origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+logger = logging.getLogger("maxi_ai_lab")
+logging.basicConfig(level=logging.INFO)
+
+API_KEY = os.getenv("GEMINI_API_KEY", "")
+AGENT = os.getenv("GEMINI_AGENT", "antigravity-preview-09-2026")
+ENVIRONMENT = os.getenv("GEMINI_ENVIRONMENT", "remote")
+SIGNING_SECRET = os.getenv("TASK_SIGNING_SECRET", "")
+ALLOWED_ORIGINS = [x.strip() for x in os.getenv("ALLOWED_ORIGINS", "").split(",") if x.strip()]
+
+client = genai.Client(api_key=API_KEY) if API_KEY else None
+signer = URLSafeTimedSerializer(SIGNING_SECRET, salt="maxi-ai-lab-tasks") if SIGNING_SECRET else None
+
+app = FastAPI(title="Maxi AI Lab Research API", version="2.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+
+class ResearchRequest(BaseModel):
+    message: str = Field(min_length=5, max_length=1200)
 
 
-class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=3000)
+def configured():
+    if client is None or signer is None:
+        raise HTTPException(status_code=503, detail="API not configured")
+
+
+def create_interaction(message):
+    return client.interactions.create(
+        agent=AGENT,
+        input=message,
+        background=True,
+        tools=[{"type": "google_search"}, {"type": "url_context"}],
+        environment=ENVIRONMENT,
+    )
+
+
+def get_interaction(interaction_id):
+    return client.interactions.get(interaction_id)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm_configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {"status": "ok", "provider": "gemini-interactions", "configured": bool(client and signer)}
 
 
-@app.post("/api/chat")
-async def chat(request: ChatRequest):
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="LLM provider not configured")
+@app.post("/api/research", status_code=202)
+async def start_research(request: ResearchRequest):
+    configured()
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-                    "messages": [
-                        {"role": "system", "content": "You are a technical assistant for the Maxi AI Lab engineering portfolio. Answer technical questions accurately. Do not fabricate clients or commercial experience."},
-                        {"role": "user", "content": request.message},
-                    ],
-                    "max_tokens": 500,
-                },
-            )
-            response.raise_for_status()
-            return {"answer": response.json()["choices"][0]["message"]["content"]}
-    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="LLM provider request failed") from exc
+        interaction = await asyncio.wait_for(
+            asyncio.to_thread(create_interaction, request.message), timeout=40
+        )
+        if not interaction.id:
+            raise ValueError("No interaction ID")
+        return {"task": signer.dumps({"id": interaction.id}), "status": str(interaction.status or "pending")}
+    except Exception as exc:
+        logger.warning("Research creation failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="Could not start research; check Render logs and agent access") from exc
+
+
+@app.get("/api/research/{task}")
+async def research_status(task: str):
+    configured()
+    try:
+        data = signer.loads(task, max_age=3600)
+        interaction_id = data["id"]
+    except (BadSignature, SignatureExpired, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid or expired task token") from exc
+    try:
+        interaction = await asyncio.wait_for(
+            asyncio.to_thread(get_interaction, interaction_id), timeout=30
+        )
+        status = str(interaction.status or "pending").lower()
+        if status == "completed":
+            return {"status": status, "answer": interaction.output_text or "Completed without text output"}
+        if status == "failed":
+            return {"status": status, "answer": "Research failed at provider"}
+        return {"status": status, "answer": None}
+    except Exception as exc:
+        logger.warning("Research status failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="Could not retrieve research status") from exc
