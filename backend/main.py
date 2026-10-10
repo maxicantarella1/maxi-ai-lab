@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
+from backend.enterprise import router as enterprise_router
+from backend.observability import setup_observability
 
 logger = logging.getLogger("maxi_ai_lab")
 logging.basicConfig(level=logging.INFO)
