@@ -21,7 +21,7 @@ el('process').addEventListener('click', () => {
   });
   el('csvResult').textContent = JSON.stringify({uniqueRecords: records.length, duplicates, invalidLines, records}, null, 2);
 });
-el('calculate').addEventListener('click', () => {
+el('send').addEventListener('click', async () => {
   const tokens = Number(el('tokens').value), rate = Number(el('rate').value);
   el('estimate').textContent = Number.isFinite(tokens) && Number.isFinite(rate) && tokens >= 0 && rate >= 0
     ? 'Costo estimado: USD ' + (tokens * rate / 1_000_000).toFixed(6) : 'Ingresá valores válidos.';
