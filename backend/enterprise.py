@@ -415,3 +415,109 @@ async def execution_detail(
 
     return result
 
+
+@router.get("/public/history")
+async def public_execution_history():
+    from sqlalchemy import select
+
+    if SessionLocal is None:
+        raise HTTPException(503, "Database not configured")
+
+    def load_public_history():
+        with SessionLocal() as db:
+            statement = (
+                select(Execution)
+                .where(Execution.is_public.is_(True))
+                .where(Execution.status == "completed")
+                .order_by(Execution.created_at.desc())
+                .limit(50)
+            )
+
+            executions = db.scalars(statement).all()
+
+            return [
+                {
+                    "run_id": item.id,
+                    "created_at": item.created_at.isoformat(),
+                    "prompt": item.prompt,
+                    "status": item.status,
+                    "model": item.model,
+                    "elapsed_ms": item.elapsed_ms,
+                    "input_tokens": item.input_tokens,
+                    "output_tokens": item.output_tokens,
+                }
+                for item in executions
+            ]
+
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(load_public_history),
+            timeout=10,
+        )
+    except Exception:
+        log.exception("Failed to load public history")
+        raise HTTPException(
+            503, "Public history temporarily unavailable"
+        )
+
+
+@router.get("/public/history/{run_id}")
+async def public_execution_detail(run_id: uuid.UUID):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    if SessionLocal is None:
+        raise HTTPException(503, "Database not configured")
+
+    def load_public_detail():
+        with SessionLocal() as db:
+            statement = (
+                select(Execution)
+                .options(selectinload(Execution.stages))
+                .where(Execution.id == str(run_id))
+                .where(Execution.is_public.is_(True))
+                .where(Execution.status == "completed")
+            )
+
+            item = db.scalar(statement)
+
+            if item is None:
+                return None
+
+            return {
+                "run_id": item.id,
+                "created_at": item.created_at.isoformat(),
+                "prompt": item.prompt,
+                "status": item.status,
+                "model": item.model,
+                "elapsed_ms": item.elapsed_ms,
+                "input_tokens": item.input_tokens,
+                "output_tokens": item.output_tokens,
+                "answer": item.answer,
+                "stages": [
+                    {
+                        "role": stage.role,
+                        "elapsed_ms": stage.elapsed_ms,
+                        "input_tokens": stage.input_tokens,
+                        "output_tokens": stage.output_tokens,
+                        "text": stage.text,
+                    }
+                    for stage in item.stages
+                ],
+            }
+
+    try:
+        result = await asyncio.wait_for(
+            asyncio.to_thread(load_public_detail),
+            timeout=10,
+        )
+    except Exception:
+        log.exception("Failed to load public execution detail")
+        raise HTTPException(
+            503, "Public detail temporarily unavailable"
+        )
+
+    if result is None:
+        raise HTTPException(404, "Public execution not found")
+
+    return result
