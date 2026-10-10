@@ -14,6 +14,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from google import genai
+from google.genai import types
 from pydantic import BaseModel, Field
 from google.genai import errors as genai_errors
 log = logging.getLogger('maxi_ai_lab.enterprise')
@@ -70,20 +71,40 @@ def enforce_limit(identity: str) -> None:
         entries.append(now)
 
 
+
 def invoke_llm(instruction: str, prompt: str):
-    # Each stage gets a separate invocation; no fabricated tool use or token counts.
-    client = genai.Client(api_key=GEMINI_KEY)
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config={'system_instruction': instruction, 'max_output_tokens': MAX_TOKENS, 'temperature': 0.25},
+    client = genai.Client(
+        api_key=GEMINI_KEY,
+        http_options=types.HttpOptions(
+            timeout=20000,
+            retry_options=types.HttpRetryOptions(
+                attempts=1
+            )
+        )
     )
-    usage = getattr(response, 'usage_metadata', None)
-    return (
-        response.text or '',
-        getattr(usage, 'prompt_token_count', None) if usage else None,
-        getattr(usage, 'candidates_token_count', None) if usage else None,
-    )
+
+    try:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=prompt,
+            config={
+                "system_instruction": instruction,
+                "max_output_tokens": MAX_TOKENS,
+                "temperature": 0.25
+            }
+        )
+
+        usage = getattr(response, "usage_metadata", None)
+
+        return (
+            response.text or "",
+            getattr(usage, "prompt_token_count", None)
+            if usage else None,
+            getattr(usage, "candidates_token_count", None)
+            if usage else None,
+        )
+    finally:
+        client.close()
 
 
 
@@ -91,11 +112,11 @@ async def stage(role: str, instruction: str, prompt: str) -> Stage:
     started = time.perf_counter()
 
     async def execute(span=None):
-        for attempt in range(1, 4):
+        for attempt in range(1, 3)::
             try:
                 result = await asyncio.wait_for(
                     asyncio.to_thread(invoke_llm, instruction, prompt),
-                    timeout=75
+                    timeout=25
                 )
                 if span:
                     span.set_attribute("agent.attempts", attempt)
@@ -103,12 +124,12 @@ async def stage(role: str, instruction: str, prompt: str) -> Stage:
 
             except genai_errors.ServerError as exc:
                 status = getattr(exc, "code", None)
-                if status not in (500, 502, 503, 504) or attempt == 3:
+                if status not in (500, 502, 503, 504) or attempt == 2:
                     raise
 
             except genai_errors.ClientError as exc:
                 status = getattr(exc, "code", None)
-                if status != 429 or attempt == 3:
+                if status != 429 or attempt == 2:
                     raise
 
             delay = 2 ** attempt
