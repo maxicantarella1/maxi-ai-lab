@@ -3,3 +3,7 @@ uvicorn[standard]>=0.30,<1
 pydantic>=2,<3
 google-genai>=1.0
 itsdangerous>=2.2,<3
+opentelemetry-api>=1.25,<2
+opentelemetry-sdk>=1.25,<2
+opentelemetry-exporter-otlp-proto-http>=1.25,<2
+opentelemetry-instrumentation-fastapi>=0.46b0,<1
