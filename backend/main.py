@@ -42,8 +42,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "x-demo-token"],
 )
+
 app.include_router(enterprise_router)
 setup_observability(app)
 class ResearchRequest(BaseModel):
