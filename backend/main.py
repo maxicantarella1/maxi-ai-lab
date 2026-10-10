@@ -1,3 +1,4 @@
+
 import os
 
 import httpx
@@ -5,9 +6,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Maxi AI Lab API", version="1.0.0")
-origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+app = FastAPI(title="Maxi AI Lab API", version="1.1.0")
+
+origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 class ChatRequest(BaseModel):
@@ -16,29 +28,68 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "llm_configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {
+        "status": "ok",
+        "provider": "gemini",
+        "llm_configured": bool(os.getenv("GEMINI_API_KEY")),
+    }
 
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=503, detail="LLM provider not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini API key not configured",
+        )
+
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+    payload = {
+        "systemInstruction": {
+            "parts": [{
+                "text": (
+                    "You are the technical assistant for Maxi AI Lab. "
+                    "Answer accurately and do not invent professional "
+                    "clients or experience."
+                )
+            }]
+        },
+        "contents": [{
+            "role": "user",
+            "parts": [{"text": request.message}],
+        }],
+        "generationConfig": {
+            "maxOutputTokens": 1024,
+        },
+    }
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=45.0) as client:
             response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-                    "messages": [
-                        {"role": "system", "content": "You are a technical assistant for the Maxi AI Lab engineering portfolio. Answer technical questions accurately. Do not fabricate clients or commercial experience."},
-                        {"role": "user", "content": request.message},
-                    ],
-                    "max_tokens": 500,
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                headers={
+                    "x-goog-api-key": api_key,
+                    "Content-Type": "application/json",
                 },
+                json=payload,
             )
             response.raise_for_status()
-            return {"answer": response.json()["choices"][0]["message"]["content"]}
-    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="LLM provider request failed") from exc
+            data = response.json()
+
+        parts = data["candidates"][0]["content"]["parts"]
+        answer = "".join(
+            part.get("text", "") for part in parts
+        ).strip()
+
+        if not answer:
+            raise ValueError("Empty model response")
+
+        return {"answer": answer}
+
+    except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini request failed",
+        ) from exc
