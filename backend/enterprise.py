@@ -289,3 +289,56 @@ async def run_agents(payload: AgentRequest, request: Request, x_demo_token: str 
         log.exception("Failed to persist execution run_id=%s", run_id)
 
     return result
+
+@router.get("/history")
+async def execution_history(
+    x_demo_token: str | None = Header(default=None),
+):
+    import secrets
+    from sqlalchemy import select
+
+    if not DEMO_TOKEN:
+        raise HTTPException(503, "Enterprise demo not configured")
+
+    if not x_demo_token or not secrets.compare_digest(
+        x_demo_token, DEMO_TOKEN
+    ):
+        raise HTTPException(401, "Invalid demo token")
+
+    if SessionLocal is None:
+        raise HTTPException(503, "Database not configured")
+
+    def load_history():
+        with SessionLocal() as db:
+            statement = (
+                select(Execution)
+                .order_by(Execution.created_at.desc())
+                .limit(50)
+            )
+
+            executions = db.scalars(statement).all()
+
+            return [
+                {
+                    "run_id": item.id,
+                    "created_at": item.created_at.isoformat(),
+                    "prompt": item.prompt,
+                    "status": item.status,
+                    "model": item.model,
+                    "elapsed_ms": item.elapsed_ms,
+                    "input_tokens": item.input_tokens,
+                    "output_tokens": item.output_tokens,
+                }
+                for item in executions
+            ]
+
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(load_history),
+            timeout=10,
+        )
+    except Exception:
+        log.exception("Failed to load execution history")
+        raise HTTPException(
+            503, "Could not load execution history"
+        )
