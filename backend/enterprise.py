@@ -86,28 +86,83 @@ def invoke_llm(instruction: str, prompt: str):
     )
 
 
+
 async def stage(role: str, instruction: str, prompt: str) -> Stage:
     started = time.perf_counter()
-    if tracer:
-        with tracer.start_as_current_span(f'agent.{role}') as span:
-            span.set_attribute('agent.role', role)
-            span.set_attribute('gen_ai.request.model', MODEL)
-            text, in_tokens, out_tokens = await asyncio.wait_for(
-                asyncio.to_thread(invoke_llm, instruction, prompt), timeout=75
-            )
-            if in_tokens is not None:
-                span.set_attribute('gen_ai.usage.input_tokens', in_tokens)
-            if out_tokens is not None:
-                span.set_attribute('gen_ai.usage.output_tokens', out_tokens)
-    else:
-        text, in_tokens, out_tokens = await asyncio.wait_for(
-            asyncio.to_thread(invoke_llm, instruction, prompt), timeout=75
-        )
-    if not text.strip():
-        raise ValueError(f'Empty response in {role}')
-    return Stage(role=role, elapsed_ms=round((time.perf_counter()-started)*1000),
-                 input_tokens=in_tokens, output_tokens=out_tokens, text=text)
 
+    async def execute(span=None):
+        for attempt in range(1, 4):
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(invoke_llm, instruction, prompt),
+                    timeout=75
+                )
+                if span:
+                    span.set_attribute("agent.attempts", attempt)
+                return result
+
+            except genai_errors.ServerError as exc:
+                status = getattr(exc, "code", None)
+                if status not in (500, 502, 503, 504) or attempt == 3:
+                    raise
+
+            except genai_errors.ClientError as exc:
+                status = getattr(exc, "code", None)
+                if status != 429 or attempt == 3:
+                    raise
+
+            delay = 2 ** attempt
+
+            log.warning(
+                "Gemini temporary failure role=%s attempt=%s/3 "
+                "status=%s retry_in_s=%s",
+                role, attempt, status, delay
+            )
+
+            if span:
+                span.add_event("gemini.retry", {
+                    "agent.role": role,
+                    "retry.attempt": attempt,
+                    "http.status_code": status,
+                    "retry.delay_seconds": delay
+                })
+
+            await asyncio.sleep(delay)
+
+        raise RuntimeError("Retry loop exhausted")
+
+    if tracer:
+        with tracer.start_as_current_span(f"agent.{role}") as span:
+            span.set_attribute("agent.role", role)
+            span.set_attribute("gen_ai.request.model", MODEL)
+
+            try:
+                text, in_tokens, out_tokens = await execute(span)
+            except Exception as exc:
+                span.record_exception(exc)
+                raise
+
+            if in_tokens is not None:
+                span.set_attribute(
+                    "gen_ai.usage.input_tokens", in_tokens
+                )
+            if out_tokens is not None:
+                span.set_attribute(
+                    "gen_ai.usage.output_tokens", out_tokens
+                )
+    else:
+        text, in_tokens, out_tokens = await execute()
+
+    if not text.strip():
+        raise ValueError(f"Empty response in {role}")
+
+    return Stage(
+        role=role,
+        elapsed_ms=round((time.perf_counter() - started) * 1000),
+        input_tokens=in_tokens,
+        output_tokens=out_tokens,
+        text=text
+    )
 
 @router.get('/health')
 def enterprise_health():
