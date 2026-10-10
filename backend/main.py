@@ -68,9 +68,17 @@ async def start_research(request: ResearchRequest):
         if not interaction.id:
             raise ValueError("No interaction ID")
         return {"task": signer.dumps({"id": interaction.id}), "status": str(interaction.status or "pending")}
-    except Exception as exc:
-        logger.warning("Research creation failed: %s", type(exc).__name__)
-        raise HTTPException(status_code=502, detail="Could not start research; check Render logs and agent access") from exc
+    
+except Exception as exc:
+    logger.error(
+        "Research creation failed: %s | Details: %s",
+        type(exc).__name__,
+        str(exc)[:1000],
+    )
+    raise HTTPException(
+        status_code=502,
+        detail="Could not start research; check Render logs"
+    ) from exc
 
 
 @app.get("/api/research/{task}")
