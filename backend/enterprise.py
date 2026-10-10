@@ -521,3 +521,66 @@ async def public_execution_detail(run_id: uuid.UUID):
         raise HTTPException(404, "Public execution not found")
 
     return result
+
+@router.post("/history/{run_id}/publish")
+async def publish_execution(
+    run_id: uuid.UUID,
+    x_demo_token: str | None = Header(default=None),
+):
+    import secrets
+    from sqlalchemy import select
+
+    if not DEMO_TOKEN:
+        raise HTTPException(503, "Enterprise demo not configured")
+
+    if not x_demo_token or not secrets.compare_digest(
+        x_demo_token, DEMO_TOKEN
+    ):
+        raise HTTPException(401, "Invalid demo token")
+
+    if SessionLocal is None:
+        raise HTTPException(503, "Database not configured")
+
+    def publish():
+        with SessionLocal() as db:
+            item = db.scalar(
+                select(Execution).where(
+                    Execution.id == str(run_id)
+                )
+            )
+
+            if item is None:
+                return None
+
+            if item.status != "completed":
+                return "not_completed"
+
+            item.is_public = True
+            db.commit()
+
+            return {
+                "run_id": item.id,
+                "is_public": True,
+                "message": "Execution published successfully",
+            }
+
+    try:
+        result = await asyncio.wait_for(
+            asyncio.to_thread(publish),
+            timeout=10,
+        )
+    except Exception:
+        log.exception("Failed to publish execution")
+        raise HTTPException(
+            503, "Could not publish execution"
+        )
+
+    if result is None:
+        raise HTTPException(404, "Execution not found")
+
+    if result == "not_completed":
+        raise HTTPException(
+            409, "Only completed executions can be published"
+        )
+
+    return result
