@@ -149,7 +149,15 @@ async function checkEnterpriseHealth() {
 document.getElementById("refresh-health")
   .addEventListener("click", checkEnterpriseHealth);
 
-checkEnterpriseHealth();
+checkEnterpriseHealth(); 
+const navObservability = document.getElementById("nav-observability");
+const observability = document.getElementById("observability");
+
+navObservability.addEventListener("click", () => {
+  observability.classList.remove("hidden");
+  observability.scrollIntoView({ behavior: "smooth" });
+});
+
 </script>
 <a href="https://boldriver272.grafana.net/goto/smhk9s"
    target="_blank"
