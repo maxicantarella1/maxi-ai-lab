@@ -88,34 +88,24 @@ async def chat(request: ChatRequest):
 
         return {"answer": answer}
 
-except httpx.HTTPStatusError as exc:
 
-    print(
+    except httpx.HTTPStatusError as exc:
+        print(
+            f"Gemini HTTP error: {exc.response.status_code} "
+            f"{exc.response.reason_phrase}",
+            flush=True,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini provider returned an HTTP error",
+        ) from exc
 
-        f"Gemini HTTP error: {exc.response.status_code} "
-
-        f"{exc.response.reason_phrase}",
-
-        flush=True,
-
-    )
-
-    raise HTTPException(
-
-        status_code=502,
-
-        detail="Gemini provider returned an HTTP error",
-
-    ) from exc
-
-except (httpx.RequestError, KeyError, IndexError, ValueError) as exc:
-
-    print(f"Gemini integration error: {type(exc).__name__}", flush=True)
-
-    raise HTTPException(
-
-        status_code=502,
-
-        detail="Gemini request failed",
-
-    ) from exc
+    except (httpx.RequestError, KeyError, IndexError, ValueError) as exc:
+        print(
+            f"Gemini integration error: {type(exc).__name__}",
+            flush=True,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Gemini request failed",
+        ) from exc
