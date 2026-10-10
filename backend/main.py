@@ -58,28 +58,39 @@ def health():
     return {"status": "ok", "provider": "gemini-interactions", "configured": bool(client and signer)}
 
 
+
 @app.post("/api/research", status_code=202)
 async def start_research(request: ResearchRequest):
     configured()
+
     try:
         interaction = await asyncio.wait_for(
-            asyncio.to_thread(create_interaction, request.message), timeout=40
+            asyncio.to_thread(
+                create_interaction,
+                request.message
+            ),
+            timeout=40
         )
+
         if not interaction.id:
             raise ValueError("No interaction ID")
-        return {"task": signer.dumps({"id": interaction.id}), "status": str(interaction.status or "pending")}
-    
-except Exception as exc:
-    logger.error(
-        "Research creation failed: %s | Details: %s",
-        type(exc).__name__,
-        str(exc)[:1000],
-    )
-    raise HTTPException(
-        status_code=502,
-        detail="Could not start research; check Render logs"
-    ) from exc
 
+        return {
+            "task": signer.dumps({"id": interaction.id}),
+            "status": str(interaction.status or "pending")
+        }
+
+    except Exception as exc:
+        logger.error(
+            "Research creation failed: %s | Details: %s",
+            type(exc).__name__,
+            str(exc)[:1000],
+        )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Could not start research; check Render logs"
+        ) from exc
 
 @app.get("/api/research/{task}")
 async def research_status(task: str):
