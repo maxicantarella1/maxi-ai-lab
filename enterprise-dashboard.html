@@ -1,7 +1,44 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080f1e"><title>Maxi AI Lab | Enterprise Dashboard</title><style>
 :root{color-scheme:dark;--bg:#080f1e;--surface:#111d31;--surface2:#0d1728;--border:#263851;--text:#f3f7ff;--muted:#94a6bf;--accent:#f8c947;--blue:#5b9dff;--green:#53e1b2}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:inherit;text-decoration:none}.layout{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}aside{border-right:1px solid var(--border);background:#0b1424;padding:30px 20px}.brand{font-weight:900;letter-spacing:.09em;font-size:18px}.brand b{color:var(--accent)}.brand small{display:block;font-size:10px;color:var(--muted);margin-top:8px;letter-spacing:.14em}.nav{margin-top:48px;display:grid;gap:8px}.nav a{padding:13px 12px;border-radius:9px;color:var(--muted)}.nav a.active,.nav a:hover{background:#192944;color:white}.nav a.active{border-left:3px solid var(--accent)}main{padding:35px min(4vw,52px);max-width:1450px;width:100%;margin:auto}.eyebrow{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.16em}.head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.head h1{font-size:clamp(30px,4vw,49px);letter-spacing:-.04em;margin:12px 0}.head p{color:var(--muted);line-height:1.7;max-width:670px}.pill{border:1px solid #40516c;border-radius:40px;padding:10px 13px;color:#d5e4f6;font-size:12px;white-space:nowrap}.banner{background:#192a40;border:1px solid #38516b;padding:14px 17px;border-radius:11px;color:#d3e1f5;margin:20px 0 22px;line-height:1.6}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 25px}button{border:1px solid #405570;background:#1b2c45;color:white;padding:11px 15px;border-radius:9px;font:inherit;font-weight:700;cursor:pointer}button:hover{border-color:var(--accent)}button.primary{background:var(--accent);color:#101827;border-color:var(--accent)}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric,.panel{border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:20px}.metric small{color:var(--muted);font-size:11px}.metric strong{display:block;font-size:clamp(19px,2.6vw,30px);margin-top:12px;overflow-wrap:anywhere}.metric span{display:block;color:var(--muted);font-size:11px;margin-top:6px}.section{margin-top:29px}.section h2{font-size:21px;letter-spacing:-.025em}.stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.stage-head{display:flex;align-items:center;justify-content:space-between;gap:9px}.stage-head h3{margin:0;font-size:17px}.status{color:var(--green);font-size:11px;font-weight:800}.stage p{color:var(--muted);font-size:12px;line-height:1.6}.stage .bar{height:8px;background:#26364e;border-radius:20px;overflow:hidden;margin:18px 0}.stage .bar div{height:100%;background:linear-gradient(90deg,#5b9dff,#f8c947);border-radius:20px}.stats{display:flex;justify-content:space-between;gap:8px;color:#b9cbe3;font-size:12px}.stage button{margin-top:16px;width:100%}.output{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75;color:#dbe6f6;max-height:380px;overflow:auto;font-size:13px}.output:empty:before{content:'Elegí una etapa para ver su respuesta.';color:var(--muted)}.panel-title{display:flex;justify-content:space-between;align-items:center;gap:10px}.panel-title h2{margin:0 0 18px}.panel-title button{margin-bottom:14px}.json-input{width:100%;min-height:125px;background:#0a1526;color:#dce8f8;border:1px solid #3b506a;border-radius:9px;padding:13px;font:12px ui-monospace,Consolas,monospace;resize:vertical}.help{color:var(--muted);font-size:12px;line-height:1.7}.error{color:#ff9f9f}.footer{border-top:1px solid var(--border);margin-top:35px;padding-top:22px;color:var(--muted);font-size:12px}.hidden{display:none}@media(max-width:1050px){.layout{grid-template-columns:1fr}aside{padding:16px 22px;display:flex;align-items:center;justify-content:space-between}.nav{margin:0;display:flex}.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:690px){main{padding:24px 16px}.head{display:block}.head .pill{display:inline-block}.stages{grid-template-columns:1fr}.metrics{gap:9px}.metric{padding:15px}.nav{gap:0}.nav a{font-size:12px;padding:9px}}
-</style></head><body><div class="layout"><aside><a class="brand" href="./index.html">MAXI <b>AI LAB</b><small>ENGINEERING STUDIO</small></a><nav class="nav"><a href="./index.html">← Inicio</a><a class="active" href="#dashboard">◈ Enterprise</a></nav></aside><main id="dashboard"><div class="head"><div><div class="eyebrow">ENTERPRISE / MULTI-AGENT OBSERVABILITY</div><h1>Agent Execution Dashboard</h1><p>Visualizá cómo tres agentes especializados investigan, revisan y coordinan una respuesta. Métricas y salidas verificables de cada etapa.</p></div><span class="pill" id="model">Gemini · Ejemplo</span></div><div class="banner" id="mode">MODO DEMOSTRACIÓN — Los datos iniciales son ilustrativos. No se está llamando a Gemini.</div><div class="actions"><button class="primary" id="demo">Ver ejemplo</button><button id="toggle-import">Importar respuesta JSON real</button><button id="copy-answer">Copiar respuesta final</button><a href="https://github.com/maxicantarella1/maxi-ai-lab" target="_blank" rel="noopener noreferrer"><button>GitHub ↗</button></a></div><section id="import-section" class="panel hidden"><h2>Importar resultado real</h2><p class="help">Pegá únicamente el JSON del <b>Response body</b> de Swagger. Eliminá cualquier token, clave o dato privado. El contenido se procesa localmente en tu navegador; no se envía a ningún servidor.</p><textarea id="json" class="json-input" placeholder='{"status":"completed","model":"...","stages":[...],"answer":"..."}'></textarea><div class="actions"><button class="primary" id="load">Cargar resultado</button><button id="clear">Limpiar</button></div><p id="message" class="help" role="status"></p></section><section class="metrics" aria-label="Métricas"><div class="metric"><small>ESTADO</small><strong id="status">Completado</strong><span id="run-id">Ejemplo local</span></div><div class="metric"><small>LATENCIA TOTAL</small><strong id="elapsed">—</strong><span>Tiempo informado por la API</span></div><div class="metric"><small>TOKENS ENTRADA</small><strong id="input">—</strong><span>Acumulado de etapas</span></div><div class="metric"><small>TOKENS SALIDA</small><strong id="output">—</strong><span>Acumulado de etapas</span></div></section><section class="section"><h2>Flujo de ejecución</h2><div class="stages" id="stages"></div></section><section class="section panel"><div class="panel-title"><h2 id="detail-title">Respuesta del agente</h2><button id="copy-stage">Copiar etapa</button></div><div class="output" id="detail" aria-live="polite"></div></section><section class="section panel"><div class="panel-title"><h2>Respuesta final</h2></div><div class="output" id="answer"></div></section><div class="footer">Maxi AI Lab · Los datos importados no se guardan ni se transmiten. Las trazas reales deben consultarse en el backend y Grafana. Este panel no realiza ejecuciones en vivo.</div></main></div><script>
+</style></head><body><div class="layout"><aside><a class="brand" href="./index.html">MAXI <b>AI LAB</b><small>ENGINEERING STUDIO</small></a><nav class="nav"><a href="./index.html">← Inicio</a><a class="active" href="#dashboard">◈ Enterprise</a></nav></aside><main id="dashboard"><div class="head"><div><div class="eyebrow">ENTERPRISE / MULTI-AGENT OBSERVABILITY</div><h1>Agent Execution Dashboard</h1><p>Visualizá cómo tres agentes especializados investigan, revisan y coordinan una respuesta. Métricas y salidas verificables de cada etapa.</p></div><span class="pill" id="model">Gemini · Ejemplo</span></div><div class="banner" id="mode">MODO DEMOSTRACIÓN — Los datos iniciales son ilustrativos. No se está llamando a Gemini.</div><div class="actions"><button class="primary" id="demo">Ver ejemplo</button><button id="toggle-import">Importar respuesta JSON real</button><button id="copy-answer">Copiar respuesta final</button><a href="https://github.com/maxicantarella1/maxi-ai-lab" target="_blank" rel="noopener noreferrer"><button>GitHub ↗</button></a></div><section id="import-section" class="panel hidden"><h2>Importar resultado real</h2><p class="help">Pegá únicamente el JSON del <b>Response body</b> de Swagger. Eliminá cualquier token, clave o dato privado. El contenido se procesa localmente en tu navegador; no se envía a ningún servidor.</p><textarea id="json" class="json-input" placeholder='{"status":"completed","model":"...","stages":[...],"answer":"..."}'></textarea><div class="actions"><button class="primary" id="load">Cargar resultado</button><button id="clear">Limpiar</button></div><p id="message" class="help" role="status"></p></section>
+<section class="section panel">
+  <div class="panel-title">
+    <h2>Estado en vivo · Render</h2>
+    <button id="refresh-health" type="button">
+      Actualizar
+    </button>
+  </div>
+
+  <p id="health-message" class="help" role="status">
+    Comprobando conexión...
+  </p>
+
+  <div class="metrics">
+    <div class="metric">
+      <small>API ENTERPRISE</small>
+      <strong id="health-status">—</strong>
+    </div>
+    <div class="metric">
+      <small>MODELO</small>
+      <strong id="health-model">—</strong>
+    </div>
+    <div class="metric">
+      <small>CONFIGURACIÓN</small>
+      <strong id="health-config">—</strong>
+    </div>
+    <div class="metric">
+      <small>LATENCIA</small>
+      <strong id="health-latency">—</strong>
+    </div>
+  </div>
+
+  <p class="help">
+    Estado del backend. No verifica la cuota
+    disponible de Gemini ni ejecuta agentes.
+  </p>
+</section>
+<section class="metrics" aria-label="Métricas"><div class="metric"><small>ESTADO</small><strong id="status">Completado</strong><span id="run-id">Ejemplo local</span></div><div class="metric"><small>LATENCIA TOTAL</small><strong id="elapsed">—</strong><span>Tiempo informado por la API</span></div><div class="metric"><small>TOKENS ENTRADA</small><strong id="input">—</strong><span>Acumulado de etapas</span></div><div class="metric"><small>TOKENS SALIDA</small><strong id="output">—</strong><span>Acumulado de etapas</span></div></section><section class="section"><h2>Flujo de ejecución</h2><div class="stages" id="stages"></div></section><section class="section panel"><div class="panel-title"><h2 id="detail-title">Respuesta del agente</h2><button id="copy-stage">Copiar etapa</button></div><div class="output" id="detail" aria-live="polite"></div></section><section class="section panel"><div class="panel-title"><h2>Respuesta final</h2></div><div class="output" id="answer"></div></section><div class="footer">Maxi AI Lab · Los datos importados no se guardan ni se transmiten. Las trazas reales deben consultarse en el backend y Grafana. Este panel no realiza ejecuciones en vivo.</div></main></div><script>
 'use strict';
 const $=id=>document.getElementById(id);
 const fmt=n=>Number.isFinite(n)?new Intl.NumberFormat('es-AR').format(n):'—';
@@ -13,4 +50,69 @@ function render(data,isReal){current=data;selected=0;safeText('model',data.model
 function showStage(i){selected=i;const s=current.stages[i];safeText('detail-title',(labels[s.role]||s.role)+' · Respuesta');safeText('detail',s.text||'Sin texto devuelto.')}
 function validate(x){if(!x||x.status!=='completed'||typeof x.model!=='string'||!Array.isArray(x.stages)||x.stages.length<1||x.stages.length>12||typeof x.answer!=='string')throw Error('El JSON debe contener status="completed", model, stages y answer.');for(const s of x.stages){if(!s||typeof s.role!=='string'||typeof s.text!=='string')throw Error('Cada etapa debe incluir role y text.')}return x}
 $('demo').addEventListener('click',()=>render(sample,false));$('toggle-import').addEventListener('click',()=>$('import-section').classList.toggle('hidden'));$('load').addEventListener('click',()=>{try{const obj=validate(JSON.parse($('json').value));render(obj,true);safeText('message','Resultado cargado correctamente.');$('json').value='';}catch(e){safeText('message','Error: '+e.message);$('message').className='help error'}});$('clear').addEventListener('click',()=>{$('json').value='';safeText('message','')});$('copy-answer').addEventListener('click',()=>navigator.clipboard.writeText(current.answer||'').catch(()=>alert('No se pudo copiar.')));$('copy-stage').addEventListener('click',()=>navigator.clipboard.writeText(current.stages[selected].text||'').catch(()=>alert('No se pudo copiar.')));render(sample,false);
+
+async function checkEnterpriseHealth() {
+  const base = "https://maxi-ai-lab-1.onrender.com";
+  const button = document.getElementById("refresh-health");
+  const show = (id, value) => {
+    document.getElementById(id).textContent = value;
+  };
+
+  button.disabled = true;
+  show("health-message", "Consultando Render...");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 65000);
+  const started = performance.now();
+
+  try {
+    const response = await fetch(
+      base + "/api/enterprise/health",
+      { signal: controller.signal, cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
+
+    const data = await response.json();
+
+    show("health-status",
+      data.status === "ok" ? "Operativa" : "No disponible"
+    );
+
+    show("health-model", data.model || "No informado");
+
+    show("health-config",
+      data.configured ? "Configurada" : "Incompleta"
+    );
+
+    show("health-latency",
+      ((performance.now() - started) / 1000).toFixed(2) + " s"
+    );
+
+    show("health-message",
+      "Última comprobación: " +
+      new Date().toLocaleTimeString("es-AR")
+    );
+
+  } catch (error) {
+    show("health-status", "Sin conexión");
+    show("health-model", "—");
+    show("health-config", "—");
+    show("health-latency", "—");
+
+    show("health-message",
+      "No se pudo consultar Render. Revisá la API o CORS."
+    );
+  } finally {
+    clearTimeout(timeout);
+    button.disabled = false;
+  }
+}
+
+document.getElementById("refresh-health")
+  .addEventListener("click", checkEnterpriseHealth);
+
+checkEnterpriseHealth();
 </script></body></html>
